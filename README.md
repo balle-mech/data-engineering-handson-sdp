@@ -6,11 +6,12 @@
 
 ```
 data_engineering_handson/
-├── README.md                          # このリポジトリ全体の説明ファイル
-├── example_answer/
-│   ├── ハンズオンガイド(Notebook編).md   # こちらを参照しながら進めてください。
-│   ├── # 各データ取り込み・加工ハンズオンノートブック
-│   └── example_answer/                # 正解例・サンプルコード
+├── README.md                      # このリポジトリ全体の説明ファイル
+├── ハンズオンガイド(Notebook編).md   # こちらを参照しながら進めてください。
+├── example_answer/                # 正解例・サンプルコード
+│   ├──
+│   ├──
+│   └──
 │
 ├── declarative_pipelines/ # 宣言型パイプライン編で使用
 │   ├── xxx.sql            # 作成中
