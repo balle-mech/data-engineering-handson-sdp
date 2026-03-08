@@ -9,18 +9,165 @@ data_engineering_handson/
 ├── README.md                      # このリポジトリ全体の説明ファイル
 ├── ハンズオンガイド(Notebook編).md   # こちらを参照しながら進めてください。
 ├── example_answer/                # 正解例・サンプルコード
-│   ├──
-│   ├──
-│   └──
-│
-├── declarative_pipelines/ # 宣言型パイプライン編で使用
-│   ├── xxx.sql            # 作成中
-│   └── xxx.sql            # 作成中
-├── sample_csv/            # ダミーCSVファイル、生成プログラム
-└── sample_taka-yayoi/     # 本リポジトリフォーク元にあった、taka-yayoiさんのサンプルコードです。
+└── sdp_handson/           # ハンズオンで作成するフォルダ、このフォルダ内で作業をする
+    └── transformations/   # ハンズオンを進める中で自動作成されるフォルダ
 ```
 
 ---
+
+## ハンズオンで最終的に作りたいもの（BIゴールイメージ）
+
+- 目的: `監査ログ(audit)` と `課金実績(usage)` を統合し、**誰が・何を・どれだけ使ったか**を可視化できるテーブルの作成
+  - BIダッシュボードは対象外
+- 扱うデータ
+  - `audit_dirty.csv`：ログ
+  - `usage_dirty.csv`：利用料
+  - `user_list.csv`：ユーザー一覧
+- 主な分析テーマ例
+  - 全体サマリ
+    - 日次別DBU、日次アクティブユーザー、日次アクセス数
+  - ユーザー分析
+    - ユーザー別利用量（DBU）ランキング
+    - workspaceごとの利用料
+  - リソース分析
+    - テーブル別アクセス数、利用ユーザー数
+
+### このハンズオンで参考にするメダリオンアーキテクチャの考え方
+
+[GitHub｜Fukunaga｜メダリオンアーキテクチャ参考.md](https://github.com/balle-mech/data_engineering_handson/blob/main/%E3%83%A1%E3%83%80%E3%83%AA%E3%82%AA%E3%83%B3%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%8F%82%E8%80%83.md)
+
+## 手順サマリ
+
+1. ハンズオンGitフォルダをクローン
+2. ETLパイプラインフォルダ・ファイルを作成
+3. Auditのブロンズ・シルバー・ゴールド作成
+4. 余力がある方は）Usageのブロンズ・シルバー・ゴールド作成
+
+## 準備手順
+
+### ハンズオンGitフォルダをクローン
+
+以下リンクをコピー
+
+> https://github.com/balle-mech/data_engineering_handson.git
+
+![Gitフォルダ作成](./img/Gitフォルダ作成.png)
+
+コピーしたリンクを貼り付け
+
+![Gitフォルダ作成2](./img/Gitフォルダ作成2.png)
+
+### ETLパイプラインフォルダ・ファイルを作成
+
+#### ETLパイプラインフォルダ作成
+
+![パイプライン作成](./img/パイプライン作成.png)
+
+![](./img/パイプライン作成_コード用のフォルダ選択.png)
+
+![](./img/パイプライン作成_空のファイルで開始.png)
+
+**※ドライランとは**
+
+![ドライランとは](./img/ドライランとは.png)
+
+#### ETLパイプライン用のsqlファイル作成方法
+
+![](./img/パイプラインファイル作成.png)
+
+![](./img/パイプラインファイル作成2.png)
+データセットの種類は「未選択」でも可
+
+**作成するファイル名**
+
+```
+01_bronze_audit.sql
+```
+
+→　ストリーミングテーブル
+
+```
+02_silver_audit.sql
+```
+
+→　ストリーミングテーブル
+
+```
+03_gold_audit_table_daily.sql
+```
+
+→　マテリアライズドビュー
+
+## スキーマ設計（例）
+
+### Bronze Audit
+
+#### スキーマ定義
+
+- テーブル名：sdp_bronze_audit
+- カラム：
+  - event_id
+  - event_time,
+  - action_name,
+  - resource_name,
+  - source_ip,
+  - user,
+  - request_params,
+  - current_timestamp AS \_ingest_timestamp,
+  - \_metadata.file_path AS \_datasource
+
+#### 要件
+
+- STRINGで保持（ストリーミングテーブル作成時に特段型の設定は必要無い）
+- カラムのズレを修正
+  - ダブルクォートで囲まれたフィールド内のカンマを区切り文字として扱わないように
+
+### Silver Audit
+
+#### スキーマ定義
+
+- テーブル名: sdp_silver_audit
+- 主キー候補: `event_id`
+- カラム:
+  - `event_id` STRING
+  - `event_time` TIMESTAMP
+  - `action_name` STRING
+  - `user_email` STRING（`user` JSON展開）
+  - `user_name` STRING（`user` JSON展開）
+  - `resource_name` STRING
+  - `full_name_arg` STRING（`request_params` JSON展開）
+  - `_ingest_timestamp` TIMESTAMP
+
+#### 加工要件
+
+- JSON展開
+  - `user` から `user_email`, `user_name`
+- null除去（SDPのExpectations機能）:
+  - `event_time`, `action_name`, `email` がnullの行を除外
+- 値前後の空白除去:
+  - `trim` を `action_name`, `resource_name`, `email` へ適用
+- 重複除去（AUTO CDC INTO 利用）:
+  - `event_id` を一意にして重複排除
+
+Usageまでやりたい方は、[GitHub｜受講者向けハンズオンガイド（Notebook編）#スキーマ設計](<https://github.com/balle-mech/data_engineering_handson/blob/main/notebooks/%E3%83%8F%E3%83%B3%E3%82%BA%E3%82%AA%E3%83%B3%E3%82%AC%E3%82%A4%E3%83%89(Notebook%E7%B7%A8).md#%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%9E%E8%A8%AD%E8%A8%88%E7%9B%AE%E6%A8%99>)を参照。
+
+### Gold Audit
+
+例）テーブル別アクセス数・利用ユーザー数（リソース分析）
+
+`gold_audit_table_daily`
+
+目的：テーブル別アクセス数、利用ユーザー数（リソース分析）
+スキーマ例：
+
+```
+event_date DATE                          # 監査ログ基準日（日単位）
+table_name STRING                        # アクセス対象テーブル名
+audit_event_count LONG                   # テーブルへの総アクセス回数
+distinct_user_count LONG                 # そのテーブルにアクセスしたユニークユーザー数
+get_table_count LONG                     # getTable操作回数
+command_submit_count LONG                # commandSubmit操作回数
+```
 
 # SDP参考
 
