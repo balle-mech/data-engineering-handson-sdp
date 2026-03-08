@@ -13,8 +13,8 @@ SELECT
   date(event_time) AS event_date,
   resource_name AS table_name,
   COUNT(*) AS audit_event_count,
-  COUNT(DISTINCT user_email) AS distinct_user_count,
+  COUNT(DISTINCT email) AS distinct_user_count,
   SUM(CASE WHEN action_name = 'getTable' THEN 1 ELSE 0 END) AS get_table_count,
   SUM(CASE WHEN action_name = 'commandSubmit' THEN 1 ELSE 0 END) AS command_submit_count
-FROM silver_audit
+FROM sdp_silver_audit
 GROUP BY date(event_time), resource_name;
