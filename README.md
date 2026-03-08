@@ -7,7 +7,7 @@
 ```
 data_engineering_handson/
 ├── README.md                      # このリポジトリ全体の説明ファイル
-├── ハンズオンガイド(Notebook編).md   # こちらを参照しながら進めてください。
+├── ハンズオンガイド(SDP編).md        # こちらを参照しながら進めてください。
 ├── example_answer/                # 正解例・サンプルコード
 └── sdp_handson/           # ハンズオンで作成するフォルダ、このフォルダ内で作業をする
     └── transformations/   # ハンズオンを進める中で自動作成されるフォルダ
