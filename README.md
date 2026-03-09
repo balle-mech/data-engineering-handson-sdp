@@ -45,6 +45,40 @@ data_engineering_handson/
 
 ## 準備手順
 
+### スキーマ・ボリューム作成(前回作成済の方はスキップ可)
+
+以下リンクをコピー
+
+> https://github.com/balle-mech/data_engineering_handson.git
+
+![Gitフォルダ作成](./img/Gitフォルダ作成.png)
+
+コピーしたリンクを貼り付け
+
+![Gitフォルダ作成2](./img/Gitフォルダ作成2.png)
+
+作成したフォルダを開き、
+`data_engineering_handson/notebooks/変数設定`を開く
+
+以下のように1セル目に入力してください。
+
+- catalog_name: 講師から案内があったカタログ名
+- schema*name: ローマ字の小文字で `名*姓` としてください。
+
+```python
+dbutils.widgets.text("catalog_name", "<講師から案内があったカタログ名>")
+dbutils.widgets.text("schema_name", "<名_姓>")
+```
+
+以下のようにウィジェットに入力してください。
+![ウィジェット設定](./img/ウィジェット_カタログ名設定.png)
+
+Run All で全て実行できることを確認する。
+
+`data_engineering_handson/notebooks/`配下の`スキーマ・ボリューム作成`ノートブックを開く。
+
+Run All で全て実行できることを確認する。
+
 ### ハンズオンGitフォルダをクローン
 
 以下リンクをコピー
