@@ -1,4 +1,4 @@
-CREATE OR REFRESH STREAMING TABLE sdp_bronze_audit
+CREATE OR REFRESH STREAMING TABLE sdp_example_bronze_audit
 COMMENT 'auditの生データ'
 AS
 SELECT
@@ -19,5 +19,5 @@ FROM
     quote => '"',
     escape => '"',
     multiline => true,
-    inferSchema => false
+    inferSchema => false -- 自動の型推論をオフ（メダリオンの思想から、STRING型で保持）
 );
