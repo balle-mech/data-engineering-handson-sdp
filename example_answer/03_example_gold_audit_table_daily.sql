@@ -1,4 +1,4 @@
-CREATE OR REFRESH MATERIALIZED VIEW sdp_gold_audit_table_daily
+CREATE OR REFRESH MATERIALIZED VIEW sdp_example_gold_audit_table_daily
 (
   event_date DATE COMMENT '監査ログ基準日（日単位）',
   table_name STRING COMMENT 'アクセス対象テーブル名',
@@ -16,5 +16,5 @@ SELECT
   COUNT(DISTINCT email) AS distinct_user_count,
   SUM(CASE WHEN action_name = 'getTable' THEN 1 ELSE 0 END) AS get_table_count,
   SUM(CASE WHEN action_name = 'commandSubmit' THEN 1 ELSE 0 END) AS command_submit_count
-FROM sdp_silver_audit
+FROM sdp_example_silver_audit
 GROUP BY date(event_time), resource_name;
