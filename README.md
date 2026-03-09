@@ -10,7 +10,6 @@
 data_engineering_handson/
 ├── README.md                      # こちらを参照しながら進めてください。
 ├── フロー_CDF_AUTO-CDC-INTO.md     # 説明で使用
-├── フロー_CDF_AUTO-CDC-INTO.md     # 説明で使用
 ├── example_answer/                # 正解例・サンプルコード
 └── sdp_handson/           # ハンズオンで作成するフォルダ、このフォルダ内で作業をする
     └── transformations/   # ハンズオンを進める中で自動作成されるフォルダ
@@ -49,12 +48,14 @@ data_engineering_handson/
 
 [GitHub｜Fukunaga｜メダリオンアーキテクチャ参考.md](https://github.com/balle-mech/data_engineering_handson/blob/main/%E3%83%A1%E3%83%80%E3%83%AA%E3%82%AA%E3%83%B3%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%8F%82%E8%80%83.md)
 
-## 手順サマリ
+## ハンズオンサマリ
 
-1. ハンズオンGitフォルダをクローン
-2. ETLパイプラインフォルダ・ファイルを作成
-3. Auditのブロンズ・シルバー・ゴールド作成
-4. 余力がある方は）Usageのブロンズ・シルバー・ゴールド作成
+1. 座学
+2. ハンズオンGitフォルダをクローン
+3. ETLパイプラインフォルダ・ファイルを作成
+4. Auditのブロンズ・シルバー・ゴールド作成
+   1. （余力がある方は、Usageのブロンズ・シルバー・ゴールド作成）
+5. 感想共有
 
 ## 準備手順
 
