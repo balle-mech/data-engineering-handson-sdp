@@ -32,7 +32,7 @@ data_engineering_handson/
   - リソース分析
     - テーブル別アクセス数、利用ユーザー数
 
-### このハンズオンで参考にするメダリオンアーキテクチャの考え方
+## ハンズオンで参考にするメダリオンアーキテクチャの考え方
 
 [GitHub｜Fukunaga｜メダリオンアーキテクチャ参考.md](https://github.com/balle-mech/data_engineering_handson/blob/main/%E3%83%A1%E3%83%80%E3%83%AA%E3%82%AA%E3%83%B3%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%8F%82%E8%80%83.md)
 
@@ -60,6 +60,15 @@ data_engineering_handson/
 ### ETLパイプラインフォルダ・ファイルを作成
 
 #### ETLパイプラインフォルダ作成
+
+1. 左サイドバーで **新規** → **ETL パイプライン** を選択
+2. パイプライン名を入力（例: `sdp_nyctaxi_pipeline`）
+3. カタログ/スキーマを設定:
+   - **カタログ**: ハンズオンにて案内します。
+   - **スキーマ**: 前回作成したものを使用（`<あなたの名>_<あなたの姓>`）
+4. **空のファイルから開始** を選択
+5. 言語は **SQL** を選択
+6. **選択** をクリック
 
 ![パイプライン作成](./img/パイプライン作成.png)
 
@@ -98,7 +107,7 @@ data_engineering_handson/
 
 →　マテリアライズドビュー
 
-## スキーマ設計（例）
+## 設計・実装方針（例）
 
 ### Bronze Audit
 
@@ -120,7 +129,42 @@ data_engineering_handson/
 
 - STRINGで保持（ストリーミングテーブル作成時に特段型の設定は必要無い）
 - カラムのズレを修正
-  - ダブルクォートで囲まれたフィールド内のカンマを区切り文字として扱わないように
+  - プロンプト例：ダブルクォートで囲まれたフィールド内のカンマを区切り文字として扱わないようにして
+
+#### 実装参考
+
+**パラメータ設定**
+
+ボリュームのパスを設定する。
+
+![](./img/パラメータ.png)
+
+![](./img/パラメータ2.png)
+
+`'${audit_csv_path}'`で変数をクエリに埋め込む。
+
+**参考クエリ**
+
+```sql
+CREATE OR REFRESH STREAMING TABLE table_name
+COMMENT 'auditの生データ'
+AS
+SELECT
+  event_id,
+  event_time,
+  action_name,
+  <その他カラム>,
+  current_timestamp AS _ingest_timestamp,  -- ファイル取り込み時間
+  _metadata.file_path AS _datasource  -- ソースパス
+FROM
+  STREAM read_files(
+    '${audit_csv_path}',
+    format => 'csv',
+    header => true,
+    <その他オプション>,
+    inferSchema => false -- 自動の型推論をオフ（メダリオンの思想から、STRING型で保持）
+);
+```
 
 ### Silver Audit
 
@@ -151,6 +195,83 @@ data_engineering_handson/
 
 Usageまでやりたい方は、[GitHub｜受講者向けハンズオンガイド（Notebook編）#スキーマ設計](<https://github.com/balle-mech/data_engineering_handson/blob/main/notebooks/%E3%83%8F%E3%83%B3%E3%82%BA%E3%82%AA%E3%83%B3%E3%82%AC%E3%82%A4%E3%83%89(Notebook%E7%B7%A8).md#%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%9E%E8%A8%AD%E8%A8%88%E7%9B%AE%E6%A8%99>)を参照。
 
+#### 実装参考
+
+以下のクエリを一つのsqlファイルで実装
+
+1. 型変換, 空白除去, json展開した一時ビューを作成
+2. テーブルだけ作る(中身は空)
+   1. エクスペクテーションでnull除外
+3. データの流し込み方を定義(これがフロー)
+   1. 重複削除
+   2. 「1.」でクレンジングした一時ビューをソースにする
+   3. event_id が重複した場合、\_ingest_timestamp が最新ものを残す
+
+**1. 型変換, 空白除去, json展開した一時ビューを作成**
+
+- trim()で両端空白を除去
+- trim(LEADING FROM str)で先頭のみ除去
+- trim(TRAILING FROM str)で末尾のみ除去
+  - 例：`trim(TRAILING FROM action_name)`
+
+[Azure Databricks｜trim例](https://learn.microsoft.com/ja-jp/azure/databricks/sql/language-manual/functions/trim)
+
+**2. テーブル定義(中身は空)**
+
+エクスペクテーションでnull除外する
+
+【エクスペクテーションの3つのモード】
+
+- EXPECT (条件) : 警告のみ（データは保持）
+- EXPECT (条件) ON VIOLATION DROP ROW : 違反行を除外
+- EXPECT (条件) ON VIOLATION FAIL UPDATE : パイプライン停止
+
+[Azure Databricks｜Expectations｜無効なレコードに対するアクション](https://learn.microsoft.com/ja-jp/azure/databricks/ldp/expectations#action-on-invalid-record)
+
+**3. データの流し込み方を定義(これがフロー)**
+
+**1~3をあわせたサンプルクエリ**
+
+```sql
+-- 1. 型変換, 空白除去, json展開した一時ビューを作成
+CREATE TEMPORARY VIEW sdp_audit_cleaned AS
+SELECT
+  event_id,
+  CAST(event_time AS TIMESTAMP) AS event_time,
+  trim(action_name) AS action_name,
+  -- TODO: resource_name を trim
+  source_ip,
+  user,
+  -- user JSONを展開し、emailとnameに分割
+  trim(from_json(user, 'STRUCT<email:STRING,name:STRING>').email) AS email,
+  from_json(user, 'STRUCT<email:STRING,name:STRING>').name AS name,
+  request_params,
+  from_json(request_params, 'STRUCT<full_name_arg:STRING>').full_name_arg AS full_name_arg,
+  _ingest_timestamp,
+  _datasource
+FROM STREAM(sdp_example_bronze_audit);
+
+-- 2. エクスペクテーションでnull除外
+CREATE OR REFRESH STREAMING TABLE table_name (
+  CONSTRAINT valid_event_id EXPECT (event_id IS NOT NULL) ON VIOLATION FAIL UPDATE,
+  CONSTRAINT valid_event_time EXPECT (event_time IS NOT NULL) ON VIOLATION DROP ROW,
+  -- TODO: action_name もNULL値除外
+  -- TODO: email もNULL値除外
+  CONSTRAINT valid_source_ip EXPECT (source_ip IS NOT NULL)
+);
+
+-- 3. 「1.」でクレンジングした一時ビューを下にテーブル作成
+-- event_id が重複した場合、_ingest_timestamp が最新ものを残す
+CREATE FLOW scd_type1_bronze_to_silver
+COMMENT 'auditのクレンジング済みデータ'
+AS
+AUTO CDC INTO sdp_example_silver_audit
+FROM STREAM(sdp_audit_cleaned)
+KEYS (<主キー>)                   -- TODO
+SEQUENCE BY <順序を決めるカラム>    -- TODO
+STORED AS SCD TYPE 1;
+```
+
 ### Gold Audit
 
 例）テーブル別アクセス数・利用ユーザー数（リソース分析）
@@ -169,85 +290,17 @@ get_table_count LONG                     # getTable操作回数
 command_submit_count LONG                # commandSubmit操作回数
 ```
 
-# SDP参考
+## SDP実装参考（弥生さんのリポジトリ参考）
 
-## 演習2: Lakeflow SDP 宣言型パイプライン（25分）
-
-**リファレンス**: `pipelines/pipeline_basic.sql`
-
-### 実行方法
-
-#### Step 1: パイプラインを作成
-
-1. 左サイドバーで **新規** → **ETL パイプライン** を選択
-2. パイプライン名を入力（例: `sdp_nyctaxi_pipeline`）
-3. カタログ/スキーマを設定:
-   - **カタログ**: `workspace`
-   - **スキーマ**: 新規作成（例: `sdp_handson_<あなたの名前>`）
-4. **空のファイルから開始** を選択
-5. 言語は **SQL** を選択
-6. **選択** をクリック
-
-#### Step 2: SQLを入力
-
-パイプラインエディタが開いたら、以下のSQLを入力:
+### ゴールドレイヤー実装参考
 
 ```sql
--- Bronze層
-CREATE MATERIALIZED VIEW bronze_trips AS
-SELECT * FROM samples.nyctaxi.trips;
 
--- Silver層
-CREATE MATERIALIZED VIEW silver_trips AS
-SELECT
-    tpep_pickup_datetime,
-    tpep_dropoff_datetime,
-    trip_distance,
-    fare_amount,
-    pickup_zip,
-    dropoff_zip,
-    DATE(tpep_pickup_datetime) AS pickup_date
-FROM bronze_trips
-WHERE fare_amount > 0
-  AND trip_distance > 0;
-
--- Gold層
-CREATE MATERIALIZED VIEW gold_daily_trips AS
-SELECT
-    pickup_date,
-    COUNT(*) AS trip_count,
-    ROUND(SUM(fare_amount), 2) AS total_fare,
-    ROUND(AVG(fare_amount), 2) AS avg_fare,
-    ROUND(AVG(trip_distance), 2) AS avg_distance
-FROM silver_trips
-GROUP BY pickup_date
-ORDER BY pickup_date;
 ```
-
-#### Step 3: 実行
-
-1. **パイプラインを実行** ボタンをクリック
-2. 右側のDAG（依存関係グラフ）で進行状況を確認
-3. 完了後、各テーブルをクリックしてデータをプレビュー
-
-### 学習内容
-
-- `CREATE MATERIALIZED VIEW` によるテーブル定義
-- 依存関係の自動解決
-- パイプラインエディタの使い方
 
 ---
 
-## 演習3: エクスペクテーションの追加（15分）
-
-**リファレンス**: `pipelines/pipeline_with_expectations.sql`
-
-### 実行方法
-
-#### 方法A: 既存パイプラインを編集
-
-1. 演習2で作成したパイプラインを開く
-2. Silver層の定義を以下に変更:
+### エクスペクテーション例
 
 ```sql
 CREATE MATERIALIZED VIEW silver_trips (
@@ -266,11 +319,9 @@ SELECT
 FROM bronze_trips;
 ```
 
-3. **パイプラインを実行** をクリック
-
 #### Step 4: 品質メトリクスを確認
 
-1. パイプライングラフで `silver_trips` をクリック
+1. パイプライングラフで `` をクリック
 2. 下部パネルの **テーブル指標** タブを確認
 3. エクスペクテーションの達成/未達成を確認
 
@@ -284,11 +335,9 @@ FROM bronze_trips;
 
 ---
 
-## 演習4: Lakeflowジョブによる自動化（15分）
+### Lakeflowジョブによる自動化例
 
 **参考資料**: `notebooks/exercise_part4_jobs.py`
-
-### 実行方法
 
 #### Step 1: ジョブを作成
 
