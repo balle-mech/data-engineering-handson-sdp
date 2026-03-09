@@ -8,14 +8,25 @@
 
 ```
 data_engineering_handson/
-├── README.md                      # このリポジトリ全体の説明ファイル
-├── ハンズオンガイド(SDP編).md        # こちらを参照しながら進めてください。
+├── README.md                      # こちらを参照しながら進めてください。
+├── フロー_CDF_AUTO-CDC-INTO.md     # 説明で使用
+├── フロー_CDF_AUTO-CDC-INTO.md     # 説明で使用
 ├── example_answer/                # 正解例・サンプルコード
 └── sdp_handson/           # ハンズオンで作成するフォルダ、このフォルダ内で作業をする
     └── transformations/   # ハンズオンを進める中で自動作成されるフォルダ
 ```
 
 ---
+
+## 座学
+
+まずは参考記事を下に、以下についてご説明します。
+
+- Spark Declarative Pipelinesとは？
+  - 命令型・宣言型
+  - 参考記事：[Qiita｜Databricks Free Edition講座 データエンジニアリング編](https://qiita.com/taka_yayoi/items/05f8c2e8a8771b0bd7c0#2%E3%81%A4%E3%81%AE%E5%AE%9F%E8%A3%85%E3%82%A2%E3%83%97%E3%83%AD%E3%83%BC%E3%83%81)
+- ストリーミングテーブルとマテリアライズド・ビュー
+  - 参考記事：[Qiita｜Lakeflow SDP入門者の鬼門：ストリーミングテーブルとマテリアライズドビューを完全理解する](https://qiita.com/taka_yayoi/items/40073e5a9a60d7a08384)
 
 ## ハンズオンで最終的に作りたいもの（BIゴールイメージ）
 
