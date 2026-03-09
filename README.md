@@ -278,12 +278,13 @@ STORED AS SCD TYPE 1;
 
 ### Gold Audit
 
-例）テーブル別アクセス数・利用ユーザー数（リソース分析）
+テーブル名例：`gold_audit_table_daily`
 
-`gold_audit_table_daily`
+粒度：日 ✖ テーブル
 
-目的：テーブル別アクセス数、利用ユーザー数（リソース分析）
-スキーマ例：
+目的：日次テーブル別アクセス数、利用ユーザー数（リソース分析）
+
+#### スキーマ例：
 
 ```
 event_date DATE                          # 監査ログ基準日（日単位）
@@ -294,15 +295,43 @@ get_table_count LONG                     # getTable操作回数
 command_submit_count LONG                # commandSubmit操作回数
 ```
 
-## SDP実装参考（弥生さんのリポジトリ参考）
+#### 実装参考
 
-### ゴールドレイヤー実装参考
+GENIEへのプロンプト例
+
+```
+以下スキーマで、 sdp_silver_audit テーブルからマテリアライズドビューを作成して。
+
+event_date DATE                          # 監査ログ基準日（日単位）
+table_name STRING                        # アクセス対象テーブル名
+audit_event_count LONG                   # テーブルへの総アクセス回数
+distinct_user_count LONG                 # そのテーブルにアクセスしたユニークユーザー数
+get_table_count LONG                     # getTable操作回数
+command_submit_count LONG                # commandSubmit操作回数
+```
+
+クエリサンプル
 
 ```sql
-
+CREATE OR REFRESH MATERIALIZED VIEW sdp_example_gold_audit_table_daily AS
+(
+  event_date DATE COMMENT '監査ログ基準日（日単位）',
+  -- TODO その他カラムも追記
+)
+COMMENT 'ゴールドレイヤ監査ログ集計'
+AS
+SELECT
+  date(event_time) AS event_date,
+  resource_name AS table_name,
+  COUNT(*) AS audit_event_count,
+  -- TODO その他カラムも集計
+FROM sdp_silver_audit
+GROUP BY date(event_time), resource_name;
 ```
 
 ---
+
+## SDP実装参考（弥生さんのリポジトリ参考）
 
 ### エクスペクテーション例
 
