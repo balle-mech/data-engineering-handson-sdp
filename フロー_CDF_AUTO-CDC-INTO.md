@@ -41,7 +41,7 @@ SELECT * FROM table_changes('tableName', 0, 10)
 > 4. UPDATE → 既存行を更新
 > 5. DELETE → 既存行を削除
 
-## SCD設定
+### SCD設定
 
 参考）[Databricks｜変更データフィードの処理: 最新データのみを保持するか、データの履歴バージョンを保持するか](https://docs.databricks.com/aws/ja/ldp/what-is-change-data-capture#%E5%A4%89%E6%9B%B4%E3%83%87%E3%83%BC%E3%82%BF%E3%83%95%E3%82%A3%E3%83%BC%E3%83%89%E3%81%AE%E5%87%A6%E7%90%86-%E6%9C%80%E6%96%B0%E3%83%87%E3%83%BC%E3%82%BF%E3%81%AE%E3%81%BF%E3%82%92%E4%BF%9D%E6%8C%81%E3%81%99%E3%82%8B%E3%81%8B%E3%83%87%E3%83%BC%E3%82%BF%E3%81%AE%E5%B1%A5%E6%AD%B4%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%82%92%E4%BF%9D%E6%8C%81%E3%81%99%E3%82%8B%E3%81%8B)
 
