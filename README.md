@@ -102,7 +102,7 @@ Run All で全て実行できることを確認する。
 
 以下リンクをコピー
 
-> https://github.com/balle-mech/data_engineering_handson.git
+> https://github.com/balle-mech/data-engineering-handson-sdp.git
 
 ![Gitフォルダ作成](./img/Gitフォルダ作成.png)
 
